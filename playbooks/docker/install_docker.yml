@@ -1,0 +1,178 @@
+#--------------------------------------------------------------------
+# Script to Install Docker
+# Tested on:
+#           Ubuntu 24.04,
+#           Fedora 40
+# Developed by Andrey Dubovsky
+#--------------------------------------------------------------------
+
+---
+- name: Install Docker and Docker Compose on Fedora 40 and Ubuntu 24.04
+  hosts: all
+  become: yes
+  vars:
+    user: "{{ DOCKER_USER }}" # Use DOCKER_USER passed via extra-vars
+
+  tasks:
+    - name: Fail if DOCKER_USER is not provided
+      ansible.builtin.fail:
+        msg: "DOCKER_USER must be provided."
+      when: user is not defined or user == ""
+
+    # Fedora 40 specific tasks
+    - name: Remove old Docker versions on Fedora 40
+      ansible.builtin.dnf:
+        name:
+          - docker
+          - docker-client
+          - docker-client-latest
+          - docker-common
+          - docker-latest
+          - docker-latest-logrotate
+          - docker-logrotate
+          - docker-selinux
+          - docker-engine-selinux
+          - docker-engine
+        state: absent
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_distribution_version == "40"
+
+    - name: Install dnf-plugins-core on Fedora 40
+      ansible.builtin.dnf:
+        name: dnf-plugins-core
+        state: present
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_distribution_version == "40"
+
+    - name: Add Docker repository on Fedora 40
+      ansible.builtin.command:
+        cmd: "dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo"
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_distribution_version == "40"
+
+    - name: Install Docker and Docker Compose on Fedora 40
+      ansible.builtin.dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_distribution_version == "40"
+
+    # Ubuntu 24.04 specific tasks
+    - name: Remove old Docker versions on Ubuntu 24.04
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-doc
+          - docker-compose
+          - containerd
+          - runc
+        state: absent
+        update_cache: yes
+      when:
+        - ansible_distribution == "Ubuntu"
+        - ansible_distribution_version == "24.04"
+
+    - name: Install necessary packages on Ubuntu 24.04
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+      when:
+        - ansible_distribution == "Ubuntu"
+        - ansible_distribution_version == "24.04"
+
+    - name: Add Docker GPG key for Ubuntu 24.04
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when:
+        - ansible_distribution == "Ubuntu"
+        - ansible_distribution_version == "24.04"
+
+    - name: Add Docker repository on Ubuntu 24.04
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+      when:
+        - ansible_distribution == "Ubuntu"
+        - ansible_distribution_version == "24.04"
+
+    - name: Install Docker and Docker Compose on Ubuntu 24.04
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+      when:
+        - ansible_distribution == "Ubuntu"
+        - ansible_distribution_version == "24.04"
+
+    # Common tasks for both Fedora 40 and Ubuntu 24.04
+    - name: Start Docker service
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: yes
+      when:
+        - (ansible_distribution == "Fedora" and ansible_distribution_version == "40") or
+          (ansible_distribution == "Ubuntu" and ansible_distribution_version == "24.04")
+
+    - name: Verify Docker installation by running hello-world container
+      ansible.builtin.command:
+        cmd: "docker run hello-world"
+      ignore_errors: yes
+      when:
+        - (ansible_distribution == "Fedora" and ansible_distribution_version == "40") or
+          (ansible_distribution == "Ubuntu" and ansible_distribution_version == "24.04")
+
+    - name: Verify Docker version
+      ansible.builtin.command:
+        cmd: "docker version"
+      register: docker_version
+      when:
+        - (ansible_distribution == "Fedora" and ansible_distribution_version == "40") or
+          (ansible_distribution == "Ubuntu" and ansible_distribution_version == "24.04")
+
+    - name: Display Docker version
+      ansible.builtin.debug:
+        msg: "Docker version: {{ docker_version.stdout }}"
+      when:
+        - (ansible_distribution == "Fedora" and ansible_distribution_version == "40") or
+          (ansible_distribution == "Ubuntu" and ansible_distribution_version == "24.04")
+
+    - name: Verify Docker Compose version
+      ansible.builtin.command:
+        cmd: "docker compose version"
+      register: docker_compose_version
+      when:
+        - (ansible_distribution == "Fedora" and ansible_distribution_version == "40") or
+          (ansible_distribution == "Ubuntu" and ansible_distribution_version == "24.04")
+
+    - name: Display Docker Compose version
+      ansible.builtin.debug:
+        msg: "Docker Compose version: {{ docker_compose_version.stdout }}"
+      when:
+        - (ansible_distribution == "Fedora" and ansible_distribution_version == "40") or
+          (ansible_distribution == "Ubuntu" and ansible_distribution_version == "24.04")
+
+    - name: Add user to Docker group
+      ansible.builtin.user:
+        name: "{{ user }}"
+        groups: docker
+        append: yes
+      when: user is defined and user != ""
