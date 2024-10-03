@@ -1,0 +1,79 @@
+#--------------------------------------------------------------------
+# Script to Install AWS CLI
+# Tested on:
+#           Ubuntu 24.04,
+#           Fedora 40
+# Developed by Andrey Dubovsky
+#--------------------------------------------------------------------
+
+---
+- name: Install AWS CLI on Ubuntu 24.04 and Fedora 40
+  hosts: all
+  become: yes
+  tasks:
+    - name: Check if the system is Ubuntu 24.04
+      ansible.builtin.debug:
+        msg: "Detected Ubuntu 24.04"
+      when:
+        - ansible_distribution == "Ubuntu"
+        - ansible_distribution_version == "24.04"
+
+    - name: Check if the system is Fedora 40
+      ansible.builtin.debug:
+        msg: "Detected Fedora 40"
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_distribution_version == "40"
+
+    - name: Install necessary packages for Ubuntu 24.04
+      ansible.builtin.apt:
+        name:
+          - unzip
+          - curl
+        state: present
+        update_cache: yes
+      when:
+        - ansible_distribution == "Ubuntu"
+        - ansible_distribution_version == "24.04"
+
+    - name: Install necessary packages for Fedora 40
+      ansible.builtin.dnf:
+        name:
+          - unzip
+          - curl
+        state: present
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_distribution_version == "40"
+
+    - name: Download the AWS CLI installation script
+      ansible.builtin.get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+        dest: "/tmp/awscliv2.zip"
+
+    - name: Unzip the AWS CLI installer
+      ansible.builtin.unarchive:
+        src: "/tmp/awscliv2.zip"
+        dest: "/tmp/"
+        remote_src: yes
+
+    - name: Install AWS CLI
+      ansible.builtin.command:
+        cmd: "/tmp/aws/install"
+        creates: /usr/local/bin/aws
+
+    - name: Verify AWS CLI installation
+      ansible.builtin.command:
+        cmd: "aws --version"
+      register: aws_cli_version
+
+    - name: Show installed AWS CLI version
+      ansible.builtin.debug:
+        msg: "AWS CLI installed version: {{ aws_cli_version.stdout }}"
+
+    - name: Fail if OS is not Ubuntu 24.04 or Fedora 40
+      ansible.builtin.fail:
+        msg: "Unsupported OS or version! This playbook only works for Ubuntu 24.04 and Fedora 40."
+      when:
+        - ansible_distribution not in ['Ubuntu', 'Fedora']
+        - ansible_distribution_version not in ['24.04', '40']
