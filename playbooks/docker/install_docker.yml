@@ -4,6 +4,10 @@
 #           Ubuntu 24.04,
 #           Fedora 40
 # Developed by Andrey Dubovsky
+# Example: 
+#
+# ansible-playbook -i inventory.ini doc.yaml --extra-vars "DOCKER_USER=<username>" --ask-become-pass
+#
 #--------------------------------------------------------------------
 
 ---
@@ -11,7 +15,7 @@
   hosts: all
   become: yes
   vars:
-    user: "{{ DOCKER_USER }}" # Use DOCKER_USER passed via extra-vars
+    user: "{{ DOCKER_USER }}"
 
   tasks:
     - name: Fail if DOCKER_USER is not provided
