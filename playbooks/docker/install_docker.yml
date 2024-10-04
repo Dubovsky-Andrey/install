@@ -1,9 +1,11 @@
 #--------------------------------------------------------------------
+#
+# Developed by Andrey Dubovsky
+#
 # Script to Install Docker
 # Tested on:
 #           Ubuntu 24.04,
 #           Fedora 40
-# Developed by Andrey Dubovsky
 # Example: 
 #
 # ansible-playbook -i inventory.ini install_docker.yml --extra-vars "DOCKER_USER=<username>" --ask-become-pass

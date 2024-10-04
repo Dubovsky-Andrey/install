@@ -1,3 +1,18 @@
+#--------------------------------------------------------------------
+#
+# Developed by Andrey Dubovsky
+#
+# Script to Install Terraform
+# Tested on:
+#           Ubuntu 24.04,
+#           Fedora 40.
+#           Amazon Linux 2023
+# Example: 
+#
+# ansible-playbook -i inventory.ini install_terraform.yml --ask-become-pass
+#
+#--------------------------------------------------------------------
+
 ---
 - name: Install Terraform on Fedora 40, Ubuntu 24.04, and Amazon Linux
   hosts: all
