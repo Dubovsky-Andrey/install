@@ -1,17 +1,5 @@
-#--------------------------------------------------------------------
-# Script to Install Terraform
-# Tested on:
-#           Ubuntu 24.04,
-#           Fedora 40
-# Developed by Andrey Dubovsky
-# Example:
-#
-# ansible-playbook -i inventory.ini install_terraform.yml --ask-become-pass
-#
-#--------------------------------------------------------------------
-
 ---
-- name: Install Terraform on Fedora 40 and Ubuntu 24.04
+- name: Install Terraform on Fedora 40, Ubuntu 24.04, and Amazon Linux
   hosts: all
   become: yes
 
@@ -54,6 +42,14 @@
       when:
         - ansible_distribution == "Fedora"
         - ansible_distribution_version == "40"
+
+    - name: Install Terraform autocomplete on Fedora 40
+      ansible.builtin.command:
+        cmd: "terraform -install-autocomplete"
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_distribution_version == "40"
+      ignore_errors: yes
 
     # Ubuntu 24.04 specific tasks
     - name: Install dependencies on Ubuntu 24.04
@@ -98,31 +94,34 @@
         - ansible_distribution == "Ubuntu"
         - ansible_distribution_version == "24.04"
 
-    # Check if Terraform autocomplete is already installed
-    - name: Check if Terraform autocomplete is already installed
-      ansible.builtin.shell:
-        cmd: "grep 'complete -C /usr/bin/terraform terraform' ~/.bashrc"
-      register: autocomplete_installed
-      ignore_errors: true
+    # Amazon Linux specific tasks
+    - name: Install yum-utils on Amazon Linux
+      ansible.builtin.yum:
+        name: yum-utils
+        state: present
       when:
-        - ansible_distribution == "Fedora"
-        - ansible_distribution_version == "40"
+        - ansible_distribution == "Amazon"
 
-    - name: Configure Terraform autocomplete
+    - name: Add HashiCorp repository on Amazon Linux
       ansible.builtin.command:
-        cmd: "terraform -install-autocomplete"
+        cmd: "yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo"
       when:
-        - (ansible_distribution == "Fedora" and ansible_distribution_version == "40") and autocomplete_installed.rc != 0
-      ignore_errors: yes  # Ignore errors since autocomplete might already be configured
+        - ansible_distribution == "Amazon"
 
-    # Common tasks for both Fedora 40 and Ubuntu 24.04
+    - name: Install Terraform on Amazon Linux
+      ansible.builtin.yum:
+        name: terraform
+        state: present
+      when:
+        - ansible_distribution == "Amazon"
+
+    # Common tasks for all distributions
     - name: Verify Terraform installation
       ansible.builtin.command:
         cmd: "terraform --version"
       register: terraform_version
       when:
-        - (ansible_distribution == "Fedora" and ansible_distribution_version == "40") or
-          (ansible_distribution == "Ubuntu" and ansible_distribution_version == "24.04")
+        - ansible_distribution in ["Fedora", "Ubuntu", "Amazon"]
 
     - name: Display Terraform version
       ansible.builtin.debug:
