@@ -1,0 +1,65 @@
+#--------------------------------------------------------------------
+#
+# Developed by Andrey Dubovsky
+#
+# Script to install git
+#
+# Tested on:
+#           Ubuntu 24.04,
+#           Fedora 40,
+#           ArchLinux 6.11.1
+#           Debian 12
+#           Amazon Linux 2023
+#           RHEL 9.4
+# Example:
+#
+# ansible-playbook -i inventory.ini git.yml
+#
+#--------------------------------------------------------------------
+
+---
+- name: Install Git on multiple distributions
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Install Git on Arch Linux
+      package:
+        name: git
+        state: present
+      when: ansible_facts['os_family'] == "Archlinux"
+
+    - name: Install Git on RedHat/CentOS (including Red Hat 9.4 and Amazon Linux 2023)
+      package:
+        name: git
+        state: present
+      when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Install Git on Debian-based systems (Debian 12, Ubuntu 24.04)
+      apt:
+        name: git
+        state: present
+        update_cache: yes
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Install Git on Fedora
+      dnf:
+        name: git
+        state: present
+      when: ansible_facts['os_family'] == "Fedora"
+
+    - name: Check git
+      ansible.builtin.command:
+        cmd: "git --version"
+      register: git_version
+      when:
+        - (ansible_facts['os_family'] == "RedHat") or
+          (ansible_facts['os_family'] == "Fedora") or
+          (ansible_facts['os_family'] == "Debian") or
+          (ansible_facts['os_family'] == "Archlinux")
+
+    - name: Display Git version
+      ansible.builtin.debug:
+        msg: "Git version: {{ git_version.stdout }}"
+      when:
+        - git_version is defined
