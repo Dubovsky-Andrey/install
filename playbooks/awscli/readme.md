@@ -28,8 +28,17 @@ This playbook has been tested and verified on the following OS versions:
 2. Ensure your Ansible inventory is configured to point to the target hosts.
 3. Run the playbook using the following command:
 
+Remote
+
    ```bash
    ansible-playbook -i <your_inventory_file> install_aws_cli.yml --ask-become-pass
+   ```
+Local
+
+   ```bash
+   ansible-playbook -i localhost, install_aws_cli.yml --connection=local
+   ```
+
 
 ## Prerequisites
 

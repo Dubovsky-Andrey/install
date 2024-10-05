@@ -1,0 +1,107 @@
+#--------------------------------------------------------------------
+# Developed by Andrey Dubovsky
+# Script to Install Prometheus Node Exporter on multiple Linux distributions
+# Tested on:
+#           Ubuntu 24.04,
+#           Fedora 40,
+#           ArchLinux 6.11.1
+#           Debian 12
+#           Amazon Linux 2023
+#           RHEL 9.4
+# Example:
+#
+# ansible-playbook -i inventory.ini install_node_exporter.yml
+#--------------------------------------------------------------------
+
+---
+- name: Install Prometheus Node Exporter on multiple distributions
+  hosts: all
+  become: yes
+  vars:
+    node_exporter_version: "1.7.0"
+    install_dir: "/usr/bin"
+    service_file: "/etc/systemd/system/node_exporter.service"
+
+  tasks:
+    - name: Create temporary directory for node_exporter
+      ansible.builtin.file:
+        path: /tmp/node_exporter_install
+        state: directory
+        mode: "0755"
+
+    - name: Download node_exporter tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter_install/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+
+    - name: Extract node_exporter tarball
+      ansible.builtin.unarchive:
+        src: "/tmp/node_exporter_install/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter_install"
+        remote_src: yes
+
+    - name: Move node_exporter binary to {{ install_dir }}
+      ansible.builtin.command:
+        cmd: "mv /tmp/node_exporter_install/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter {{ install_dir }}/"
+        creates: "{{ install_dir }}/node_exporter"
+
+    - name: Ensure node_exporter user exists
+      ansible.builtin.user:
+        name: node_exporter
+        shell: /bin/false
+        system: yes
+
+    - name: Set ownership for node_exporter binary
+      ansible.builtin.file:
+        path: "{{ install_dir }}/node_exporter"
+        owner: node_exporter
+        group: node_exporter
+        mode: "0755"
+
+    - name: Create node_exporter service file
+      ansible.builtin.copy:
+        dest: "{{ service_file }}"
+        content: |
+          [Unit]
+          Description=Prometheus Node Exporter
+          After=network.target
+
+          [Service]
+          User=node_exporter
+          Group=node_exporter
+          Type=simple
+          Restart=on-failure
+          ExecStart={{ install_dir }}/node_exporter
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: "0644"
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: Start node_exporter service
+      ansible.builtin.systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+
+    - name: Check node_exporter status
+      ansible.builtin.systemd:
+        name: node_exporter
+        state: started
+
+    - name: Verify node_exporter version
+      ansible.builtin.command:
+        cmd: "{{ install_dir }}/node_exporter --version"
+      register: node_exporter_version
+
+    - name: Display node_exporter version
+      ansible.builtin.debug:
+        msg: "Node Exporter version: {{ node_exporter_version.stdout }}"
+
+    - name: Cleanup temporary files
+      ansible.builtin.file:
+        path: /tmp/node_exporter_install
+        state: absent
