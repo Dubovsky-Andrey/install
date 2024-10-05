@@ -11,6 +11,17 @@ This Ansible playbook is designed to install the AWS CLI on the following Linux 
 
 The playbook includes tasks to detect the OS version, install the necessary dependencies (`unzip` and `curl`), and finally install the AWS CLI.
 
+## Supported OS Versions
+
+This playbook has been tested and verified on the following OS versions:
+
+- **Ubuntu** 24.04
+- **Fedora** 40
+- **Amazon Linux** 2023
+- **Arch Linux** 6.11*
+- **RHEL** 9.4
+- **Debian** 12
+
 ## Usage
 
 1. Clone the repository or download the playbook.
@@ -26,14 +37,4 @@ Ensure you have the following prerequisites before running the playbook:
 
 - Ansible installed on your control machine.
 - Sudo privileges on the target machines.
-
-## Supported OS Versions
-
-This playbook has been tested and verified on the following OS versions:
-
-- **Ubuntu** 24.04
-- **Fedora** 40
-- **Amazon Linux** 2023
-- **Arch Linux** 6.11*
-- **RHEL** 9.4
-- **Debian** 12
+- **On RHEL systems**: Ensure that `/usr/local/bin` is included in the `PATH` for both interactive and non-interactive sessions.
