@@ -5,141 +5,131 @@
 # Script to Install Terraform
 # Tested on:
 #           Ubuntu 24.04,
-#           Fedora 40.
-#           Amazon Linux 2023
+#           Fedora 40,
+#           Amazon Linux 2023,
+#           Arch Linux,
+#           RHEL 9.4,
+#           Debian 12
 # Example: 
 #
-# ansible-playbook -i inventory.ini install_terraform.yml --ask-become-pass
+# ansible-playbook -i inventory.ini install_terraform.yml
 #
 #--------------------------------------------------------------------
 
 ---
-- name: Install Terraform on Fedora 40, Ubuntu 24.04, and Amazon Linux
+- name: Install Terraform on Ubuntu, Debian, CentOS, RHEL, Fedora, and Amazon Linux
   hosts: all
   become: yes
 
   tasks:
-    # Fedora 40 specific tasks
-    - name: Install dependencies on Fedora 40
-      ansible.builtin.dnf:
-        name:
-          - wget
-          - gnupg2
-        state: present
-        update_cache: yes
-      when:
-        - ansible_distribution == "Fedora"
-        - ansible_distribution_version == "40"
-
-    - name: Add HashiCorp GPG key on Fedora 40
-      ansible.builtin.command:
-        cmd: "rpm --import https://rpm.releases.hashicorp.com/gpg"
-      when:
-        - ansible_distribution == "Fedora"
-        - ansible_distribution_version == "40"
-
-    - name: Add HashiCorp repository on Fedora 40
-      ansible.builtin.yum_repository:
-        name: hashicorp
-        description: "HashiCorp Stable - $basearch"
-        baseurl: https://rpm.releases.hashicorp.com/fedora/$releasever/$basearch/stable
-        gpgkey: https://rpm.releases.hashicorp.com/gpg
-        enabled: yes
-      when:
-        - ansible_distribution == "Fedora"
-        - ansible_distribution_version == "40"
-
-    - name: Install Terraform on Fedora 40
-      ansible.builtin.dnf:
-        name: terraform
-        state: present
-        update_cache: yes
-      when:
-        - ansible_distribution == "Fedora"
-        - ansible_distribution_version == "40"
-
-    - name: Install Terraform autocomplete on Fedora 40
-      ansible.builtin.command:
-        cmd: "terraform -install-autocomplete"
-      when:
-        - ansible_distribution == "Fedora"
-        - ansible_distribution_version == "40"
-      ignore_errors: yes
-
-    # Ubuntu 24.04 specific tasks
-    - name: Install dependencies on Ubuntu 24.04
+    # Ubuntu/Debian specific tasks
+    - name: Install dependencies on Ubuntu/Debian
       ansible.builtin.apt:
         name:
-          - wget
           - gnupg
           - software-properties-common
         state: present
         update_cache: yes
-      when:
-        - ansible_distribution == "Ubuntu"
-        - ansible_distribution_version == "24.04"
+      when: ansible_distribution in ["Ubuntu", "Debian"]
 
-    - name: Add HashiCorp GPG key on Ubuntu 24.04
+    - name: Add HashiCorp GPG key on Ubuntu/Debian
       ansible.builtin.shell:
         cmd: "wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null"
-      when:
-        - ansible_distribution == "Ubuntu"
-        - ansible_distribution_version == "24.04"
+      when: ansible_distribution in ["Ubuntu", "Debian"]
 
-    - name: Add HashiCorp repository on Ubuntu 24.04
+    - name: Verify HashiCorp GPG key on Ubuntu/Debian
+      ansible.builtin.command:
+        cmd: "gpg --no-default-keyring --keyring /usr/share/keyrings/hashicorp-archive-keyring.gpg --fingerprint"
+      when: ansible_distribution in ["Ubuntu", "Debian"]
+
+    - name: Add HashiCorp repository on Ubuntu/Debian
       ansible.builtin.apt_repository:
         repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_lsb.codename }} main"
-      when:
-        - ansible_distribution == "Ubuntu"
-        - ansible_distribution_version == "24.04"
+      when: ansible_distribution in ["Ubuntu", "Debian"]
 
-    - name: Update apt repositories on Ubuntu 24.04
+    - name: Update apt repository on Ubuntu/Debian
       ansible.builtin.apt:
         update_cache: yes
-      when:
-        - ansible_distribution == "Ubuntu"
-        - ansible_distribution_version == "24.04"
+      when: ansible_distribution in ["Ubuntu", "Debian"]
 
-    - name: Install Terraform on Ubuntu 24.04
+    - name: Install Terraform on Ubuntu/Debian
       ansible.builtin.apt:
         name: terraform
         state: present
         update_cache: yes
-      when:
-        - ansible_distribution == "Ubuntu"
-        - ansible_distribution_version == "24.04"
+      when: ansible_distribution in ["Ubuntu", "Debian"]
+
+    # CentOS/RHEL specific tasks
+    - name: Install yum-utils on CentOS/RHEL
+      ansible.builtin.yum:
+        name: yum-utils
+        state: present
+      when: ansible_distribution in ["RedHat", "CentOS"]
+
+    - name: Add HashiCorp repository on CentOS/RHEL
+      ansible.builtin.command:
+        cmd: "yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo"
+      when: ansible_distribution in ["RedHat", "CentOS"]
+
+    - name: Install Terraform on CentOS/RHEL
+      ansible.builtin.yum:
+        name: terraform
+        state: present
+      when: ansible_distribution in ["RedHat", "CentOS"]
+
+    # Fedora specific tasks
+    - name: Install dnf-plugins-core on Fedora
+      ansible.builtin.dnf:
+        name: dnf-plugins-core
+        state: present
+      when: ansible_distribution == "Fedora"
+
+    - name: Add HashiCorp repository on Fedora
+      ansible.builtin.command:
+        cmd: "dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo"
+      when: ansible_distribution == "Fedora"
+
+    - name: Install Terraform on Fedora
+      ansible.builtin.dnf:
+        name: terraform
+        state: present
+      when: ansible_distribution == "Fedora"
 
     # Amazon Linux specific tasks
     - name: Install yum-utils on Amazon Linux
       ansible.builtin.yum:
         name: yum-utils
         state: present
-      when:
-        - ansible_distribution == "Amazon"
+      when: ansible_distribution == "Amazon"
 
     - name: Add HashiCorp repository on Amazon Linux
       ansible.builtin.command:
         cmd: "yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo"
-      when:
-        - ansible_distribution == "Amazon"
+      when: ansible_distribution == "Amazon"
 
     - name: Install Terraform on Amazon Linux
       ansible.builtin.yum:
         name: terraform
         state: present
-      when:
-        - ansible_distribution == "Amazon"
+      when: ansible_distribution == "Amazon"
 
-    # Common tasks for all distributions
+    # Arch Linux specific tasks
+    - name: Install Terraform on Arch Linux
+      ansible.builtin.pacman:
+        name: terraform
+        state: present
+        update_cache: yes
+      when:
+        - ansible_distribution == "Archlinux"
+
+    # Common task to verify Terraform installation
     - name: Verify Terraform installation
       ansible.builtin.command:
         cmd: "terraform --version"
       register: terraform_version
-      when:
-        - ansible_distribution in ["Fedora", "Ubuntu", "Amazon"]
+      ignore_errors: yes
 
     - name: Display Terraform version
       ansible.builtin.debug:
         msg: "Terraform version installed: {{ terraform_version.stdout }}"
-      when:
-        - terraform_version is defined
+      when: terraform_version is defined
