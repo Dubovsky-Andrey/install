@@ -18,7 +18,7 @@ The playbook includes tasks to detect the OS version, install the necessary depe
 3. Run the playbook using the following command:
 
    ```bash
-   ansible-playbook -i your_inventory_file install_aws_cli.yml --ask-become-pass
+   ansible-playbook -i <your_inventory_file> install_aws_cli.yml --ask-become-pass
 
 ## Prerequisites
 
