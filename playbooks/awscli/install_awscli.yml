@@ -2,28 +2,46 @@
 # Script to Install AWS CLI
 # Tested on:
 #           Ubuntu 24.04,
-#           Fedora 40
+#           Fedora 40,
+#           Amazon Linux 2023,
+#           Arch Linux 6.11*,
+#           RHEL 9.4,
+#           Debian 12
+#
 # Developed by Andrey Dubovsky
 #--------------------------------------------------------------------
 
 ---
-- name: Install AWS CLI on Ubuntu 24.04 and Fedora 40
+- name: Install AWS CLI on Ubuntu 24.04, Fedora 40, Amazon Linux 2023, Arch Linux 6.11*, RHEL 9.4, and Debian 12
   hosts: all
   become: yes
   tasks:
+    - name: Fail if OS is not supported
+      ansible.builtin.fail:
+        msg: "Unsupported OS or version! This playbook tested only for Ubuntu 24.04, Fedora 40, Amazon Linux 2023, Arch Linux 6.11*, RHEL 9.4, and Debian 12.7"
+      when:
+        - ansible_distribution not in ['Ubuntu', 'Fedora', 'Amazon', 'Archlinux', 'RedHat', 'Debian']
+        - ansible_distribution_version not in ['24.04', '40', '2023', '6.11*', '9.4', '12']
+
+    - name: Check PATH for root user in Ansible
+      ansible.builtin.command:
+        cmd: "echo $PATH"
+      become: yes
+      register: root_path
+    - debug:
+        var: root_path.stdout
+
+    - name: Show distribution, version, IP address, and hostname
+      ansible.builtin.debug:
+        msg: "Distribution: {{ ansible_distribution }}, Version: {{ ansible_distribution_version }}, IP Address: {{ ansible_default_ipv4.address }}, Hostname: {{ ansible_hostname }}, Root PATH: {{ root_path.stdout }}"
+
+    # Ubuntu 24.04
     - name: Check if the system is Ubuntu 24.04
       ansible.builtin.debug:
         msg: "Detected Ubuntu 24.04"
       when:
         - ansible_distribution == "Ubuntu"
         - ansible_distribution_version == "24.04"
-
-    - name: Check if the system is Fedora 40
-      ansible.builtin.debug:
-        msg: "Detected Fedora 40"
-      when:
-        - ansible_distribution == "Fedora"
-        - ansible_distribution_version == "40"
 
     - name: Install necessary packages for Ubuntu 24.04
       ansible.builtin.apt:
@@ -36,6 +54,14 @@
         - ansible_distribution == "Ubuntu"
         - ansible_distribution_version == "24.04"
 
+    # Fedora 40
+    - name: Check if the system is Fedora 40
+      ansible.builtin.debug:
+        msg: "Detected Fedora 40"
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_distribution_version == "40"
+
     - name: Install necessary packages for Fedora 40
       ansible.builtin.dnf:
         name:
@@ -46,6 +72,74 @@
         - ansible_distribution == "Fedora"
         - ansible_distribution_version == "40"
 
+    # Amazon Linux 2023
+    - name: Check if the system is Amazon Linux 2023
+      ansible.builtin.debug:
+        msg: "Detected Amazon Linux 2023"
+      when:
+        - ansible_distribution == "Amazon"
+        - ansible_distribution_version == "2023"
+
+    - name: Install necessary packages for Amazon Linux 2023
+      ansible.builtin.yum:
+        name:
+          - unzip
+        state: present
+      when:
+        - ansible_distribution == "Amazon"
+        - ansible_distribution_version == "2023"
+
+    # Arch Linux 6.*
+    - name: Check if the system is Arch Linux 6.*
+      ansible.builtin.debug:
+        msg: "Detected Arch Linux 6.*"
+      when:
+        - ansible_distribution == "Archlinux"
+
+    - name: Install necessary packages for Arch Linux 6.*
+      ansible.builtin.pacman:
+        name:
+          - unzip
+          - curl
+        state: present
+        update_cache: yes
+      when:
+        - ansible_distribution == "Archlinux"
+
+    # RHEL 
+    - name: Check if the system is RHEL*
+      ansible.builtin.debug:
+        msg: "Detected RHEL 9*"
+      when:
+        - ansible_distribution == "RedHat"
+
+    - name: Install necessary packages for RHEL*
+      ansible.builtin.dnf:
+        name:
+          - unzip
+          - curl
+        state: present
+      when:
+        - ansible_distribution == "RedHat"
+
+    # Debian 12
+    - name: Check if the system is Debian 12
+      ansible.builtin.debug:
+        msg: "Detected Debian 12"
+      when:
+        - ansible_distribution == "Debian"
+
+    - name: Install necessary packages for Debian 12
+      ansible.builtin.apt:
+        name:
+          - unzip
+          - curl
+        state: present
+        update_cache: yes
+      when:
+        - ansible_distribution == "Debian"
+    
+    # Common tasks for all distributions
     - name: Download the AWS CLI installation script
       ansible.builtin.get_url:
         url: "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
@@ -70,10 +164,3 @@
     - name: Show installed AWS CLI version
       ansible.builtin.debug:
         msg: "AWS CLI installed version: {{ aws_cli_version.stdout }}"
-
-    - name: Fail if OS is not Ubuntu 24.04 or Fedora 40
-      ansible.builtin.fail:
-        msg: "Unsupported OS or version! This playbook only works for Ubuntu 24.04 and Fedora 40."
-      when:
-        - ansible_distribution not in ['Ubuntu', 'Fedora']
-        - ansible_distribution_version not in ['24.04', '40']
